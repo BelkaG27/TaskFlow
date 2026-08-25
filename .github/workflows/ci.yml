@@ -21,6 +21,9 @@ jobs :
           java-version : '21'
           distribution : 'temurin'
 
+      - name: Rendre mvnw exécutable
+        run: chmod +x mvnw
+        
       - name : Lancer les tests
         run : ./mvnw test
 
