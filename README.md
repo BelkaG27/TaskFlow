@@ -27,26 +27,16 @@ API REST de gestion de tâches, développée avec Spring Boot et PostgreSQL.
 
 ## Installation et lancement
 
-### 1. Cloner le projet
+## Installation et lancement
 
-\`\`\`bash
+### 1. Cloner le projet
 git clone https://github.com/BelkaG27/taskflow.git
 cd taskflow
-\`\`\`
 
-### 2. Lancer la base de données PostgreSQL
+### 2. Lancer l'application complète (backend + base de données)
+docker compose up -d --build
 
-\`\`\`bash
-docker compose up -d
-\`\`\`
-
-### 3. Lancer l'application
-
-\`\`\`bash
-./mvnw spring-boot:run
-\`\`\`
-
-L'API est accessible sur `http://localhost:8080`.
+L'API est accessible sur http://localhost:8080
 
 ## Endpoints disponibles
 
