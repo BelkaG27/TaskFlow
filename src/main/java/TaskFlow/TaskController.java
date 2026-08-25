@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.validation.Valid;
+
 import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -35,12 +38,12 @@ public class TaskController {
     }
 
     @PostMapping("/tasks")
-    public Task createTask(@RequestBody Task task){
+    public Task createTask(@Valid @RequestBody Task task){
         return taskRepository.save(task);
     }
 
     @PutMapping("/tasks/{id}")
-    public ResponseEntity<Task> updateTask(@PathVariable int id,@RequestBody Task updatedTask){
+    public ResponseEntity<Task> updateTask(@PathVariable int id,@Valid @RequestBody Task updatedTask){
         return taskRepository.findById(id)
                .map(t->{
                     t.setTitre(updatedTask.getTitre());

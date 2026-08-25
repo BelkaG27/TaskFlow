@@ -10,6 +10,17 @@ services:
       - "5432:5432"
     volumes:
       - taskflow-data:/var/lib/postgresql/data
+  app:
+    build: .
+    container_name: taskflow-app
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/taskflow
+      SPRING_DATASOURCE_USERNAME: taskflow_user
+      SPRING_DATASOURCE_PASSWORD: taskflow_pass
+    ports:
+      - "8080:8080"
 
 volumes:
   taskflow-data:
