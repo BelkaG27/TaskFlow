@@ -47,7 +47,8 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable()) // on utilise des tokens JWT (pas de sessions, pas de cookies de session), cette protection n'est pas pertinente ici.
             .authorizeHttpRequests(auth-> auth
-                .requestMatchers("/auth/**").permitAll() // 
+                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // autoriser l'accès aux pages de documentation Swagger et aux endpoints de l'API
                 .anyRequest().authenticated()
             )
             .sessionManagement(session->session
