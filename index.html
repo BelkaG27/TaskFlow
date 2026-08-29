@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>TaskFlow</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, sans-serif;
+    max-width: 600px;
+    margin: 40px auto;
+    background: #f5f5f7;
+    color: #1d1d1f;
+  }
+  h1 { text-align: center; }
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  input {
+    width: 100%;
+    padding: 10px;
+    margin: 6px 0;
+    border: 1px solid #d2d2d7;
+    border-radius: 8px;
+  }
+  button {
+    background: #0071e3;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  button:hover { background: #005bb5; }
+  button.danger { background: #d70015; }
+  button.danger:hover { background: #a3000f; }
+  .task {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+  }
+  .task.done .titre { text-decoration: line-through; color: #999; }
+  #error { color: #d70015; margin-top: 8px; }
+  #app { display: none; }
+  #auth-section { }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row input[type="checkbox"] { width: auto; }
+</style>
+</head>
+<body>
+
+<h1>TaskFlow</h1>
+
+<div id="auth-section" class="card">
+  <h2>Connexion / Inscription</h2>
+  <input id="username" placeholder="Nom d'utilisateur">
+  <input id="password" type="password" placeholder="Mot de passe">
+  <input id="email" placeholder="Email (pour inscription uniquement)">
+  <button onclick="login()">Se connecter</button>
+  <button onclick="register()">S'inscrire</button>
+  <div id="error"></div>
+</div>
+
+<div id="app">
+  <div class="card">
+    <div class="row" style="justify-content: space-between;">
+      <span>Connecté en tant que <strong id="whoami"></strong></span>
+      <button onclick="logout()">Déconnexion</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Nouvelle tâche</h2>
+    <input id="new-titre" placeholder="Titre">
+    <input id="new-description" placeholder="Description">
+    <button onclick="createTask()">Ajouter</button>
+  </div>
+
+  <div class="card">
+    <h2>Mes tâches</h2>
+    <div id="tasks"></div>
+  </div>
+</div>
+
+<script>
+const API_URL = "http://localhost:8080";
+let token = null;
+
+function showError(message) {
+  document.getElementById("error").innerText = message;
+}
+
+async function register() {
+  showError("");
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+  const email = document.getElementById("email").value;
+
+  try {
+    const res = await fetch(`${API_URL}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password, email })
+    });
+    if (!res.ok) throw new Error("Échec de l'inscription (username peut-être déjà pris)");
+    const data = await res.json();
+    onLoginSuccess(data.token, username);
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+async function login() {
+  showError("");
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  try {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+    if (!res.ok) throw new Error("Identifiants incorrects");
+    const data = await res.json();
+    onLoginSuccess(data.token, username);
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+function onLoginSuccess(receivedToken, username) {
+  token = receivedToken;
+  document.getElementById("auth-section").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  document.getElementById("whoami").innerText = username;
+  loadTasks();
+}
+
+function logout() {
+  token = null;
+  document.getElementById("auth-section").style.display = "block";
+  document.getElementById("app").style.display = "none";
+  document.getElementById("username").value = "";
+  document.getElementById("password").value = "";
+}
+
+async function loadTasks() {
+  const res = await fetch(`${API_URL}/tasks`, {
+    headers: { "Authorization": `Bearer ${token}` }
+  });
+  const tasks = await res.json();
+
+  const container = document.getElementById("tasks");
+  container.innerHTML = "";
+
+  if (tasks.length === 0) {
+    container.innerHTML = "<p>Aucune tâche pour l'instant.</p>";
+    return;
+  }
+
+  tasks.forEach(task => {
+    const div = document.createElement("div");
+    div.className = "task" + (task.terminee ? " done" : "");
+    div.innerHTML = `
+      <div class="row">
+        <input type="checkbox" ${task.terminee ? "checked" : ""} onchange="toggleTask(${task.id}, this.checked, '${task.titre.replace(/'/g, "\\'")}', '${(task.description||"").replace(/'/g, "\\'")}')">
+        <span class="titre">${task.titre}</span>
+      </div>
+      <button class="danger" onclick="deleteTask(${task.id})">Supprimer</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+async function createTask() {
+  const titre = document.getElementById("new-titre").value;
+  const description = document.getElementById("new-description").value;
+
+  if (!titre.trim()) {
+    alert("Le titre est obligatoire");
+    return;
+  }
+
+  await fetch(`${API_URL}/tasks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({ titre, description, terminee: false })
+  });
+
+  document.getElementById("new-titre").value = "";
+  document.getElementById("new-description").value = "";
+  loadTasks();
+}
+
+async function toggleTask(id, terminee, titre, description) {
+  await fetch(`${API_URL}/tasks/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({ titre, description, terminee })
+  });
+  loadTasks();
+}
+
+async function deleteTask(id) {
+  await fetch(`${API_URL}/tasks/${id}`, {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${token}` }
+  });
+  loadTasks();
+}
+</script>
+
+</body>
+</html>
